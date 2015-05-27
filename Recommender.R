@@ -1,54 +1,60 @@
-library(rbenchmark)
-library(rmongodb)
-library(NMF)
-loadDataset <- function(driver, dbns, amount, fields) {
-  result <- NULL
-  if(mongo.is.connected(driver) == T) {
-    result <- mongo.find.all(driver, dbns, limit = amount, fields = fields)
-  }
-  return(result)
-}
+library(recommenderlab)
 
-transformData <- function(data) {
-  data <- unname(unlist(data))
-  rows <- data[seq.int(1, length(data), 3L)]
-  cols <- data[seq.int(2, length(data), 3L)]
-  
-  rows <- sort(as.numeric(unique(rows)))
-  cols <- sort(as.numeric(unique(cols)))
-  
-  matrix <- matrix(0, length(rows), length(cols), dimnames = list(rows, cols))
-  
-  i <- 1
-  while(i < length(data)) {
-    matrix[match(as.numeric(data[i]), rows), match(as.numeric(data[i + 1]), cols)] = as.numeric(data[i + 2])
-    i <- i + 3
-  }
-  
-  return(matrix)
-}
+# Load data from CSV file.
+affinity.data <- read.csv("~/Downloads/MovieLens/ratings.dat", sep=";", header = FALSE)
+# Remove timestamp row from data.
+affinity.data <- affinity.data[, -c(4)]
+# Set column names for data frame.
+colnames(affinity.data) <- c("uId", "mId", "rPreference")
 
-factorizeMatrix <- function(matrix) {
-  result <- nmf(matrix, length(colnames(matrix)))
-  print(fitted(result))
-}
-# Establish connection to the MongoDB server.
-driver <- mongo.create(host = "localhost")
-if(mongo.is.connected(driver) == T) {
-  
-  # Select fields that should be returned.
-  buf <- mongo.bson.buffer.create()
-  mongo.bson.buffer.append(buf, "mId", 1)
-  mongo.bson.buffer.append(buf, "uId", 1)
-  mongo.bson.buffer.append(buf, "rPreference", 1)
-  mongo.bson.buffer.append(buf, "_id", 0)
-  
-  # Load data from DB.
-  data <- loadDataset(driver, "movielens.ratings", 1000, mongo.bson.from.buffer(buf))
-  lettn <- transformData(data)
-  lettn <- factorizeMatrix(lettn)
-  
-  mongo.destroy(driver)
-} else {
-  print("Could not connect to MongoDB.")
-}
+# Transform data to rating matrix.
+affinity.matrix <- as(affinity.data, "realRatingMatrix")
+# Create a recommender model.
+Rec.model <-Recommender(affinity.matrix[1:1000], method="UBCF", param=list(normalize="Z-score", method="Cosine", nn=5, minRating=1))
+
+# Predict ratings for every item in the matrix.
+#predicted <- predict(Rec.model, affinity.matrix[1:1000], type="ratings")
+
+# Predict 5 items for the user with the id 100.
+recommended.items.u100 <- predict(Rec.model, affinity.matrix["100",], type="ratings")
+# Look for the top 3 elements for the user with the id 100.
+# recommended.items.u100.top3 <- bestN(recommended.items.u100, n=3)
+
+# Print the top 3 recommendations for the user.
+#print(as(recommended.items.u100.top3, "list"))
+# Print the newly calculated values.
+print(as(recommended.items.u100, "list"))
+# Print the real matrix.
+print(as(affinity.matrix["100",], "list"))
+
+e <- evaluationScheme(affinity.matrix[1:1000], method="split", train=0.9, given=15)
+Rec.ubcf <- Recommender(getData(e, "train"), "UBCF")
+# Rec.ibcf <- Recommender(getData(e, "train"), "IBCF")
+p.ubcf <- predict(Rec.ubcf, getData(e, "known"), type="ratings")
+# p.ibcf <- predict(Rec.ibcf, getData(e, "known"), type="ratings")
+error.ubcf <- calcPredictionAccuracy(p.ubcf, getData(e, "unknown"))
+# error.ibcf <- calcPredictionAccuracy(p.ibcf, getData(e, "unknown"))
+# error <- rbind(error.ubcf, error.ibcf)
+# rownames(error) <- c("UBCF", "IBCF")
+print(error.ubcf)
+# Rec.model <- Recommender(affinity.matrix[1:1000], "UBCF")
+# 
+# recommended.items.u1 <- predict(Rec.model, affinity.matrix["1",], n=5)
+# recommended.items.u1.top <- bestN(recommended.items.u1, n=3)
+# 
+# # print(as(recommended.items.u1.top, "list"))
+# 
+# predicted.affinity.u1 <- predict(Rec.model, affinity.matrix["100", ], type="ratings")
+# print(as(predicted.affinity.u1, "list"))
+# print(as(affinity.matrix["100", ], "list"))y
+# 
+# e <- evaluationScheme(affinity.matrix[1:1000], method="split", train=0.9, given=15)
+# Rec.ubcf <- Recommender(getData(e, "train"), "UBCF")
+# # Rec.ibcf <- Recommender(getData(e, "train"), "IBCF")
+# p.ubcf <- predict(Rec.ubcf, getData(e, "known"), type="ratings")
+# # p.ibcf <- predict(Rec.ibcf, getData(e, "known"), type="ratings")
+# error.ubcf <- calcPredictionAccuracy(p.ubcf, getData(e, "unknown"))
+# # error.ibcf <- calcPredicitionAccuracy(p.ibcf, getData(e, "unknown"))
+# # error <- rbind(error.ubcf, error.ibcf)
+# # rownames(error) <- c("UBCF", "IBCF")
+# print(error.ubcf)
