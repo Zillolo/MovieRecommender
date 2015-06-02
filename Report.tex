@@ -1,6 +1,11 @@
 \documentclass[german,a4paper]{article}
 
 \usepackage{babel}
+
+\usepackage{float}
+\usepackage{graphicx}
+\graphicspath{{fig/}}
+
 \usepackage[utf8]{inputenc}
 
 \title{Recommender System auf Basis von Collaborative Filtering}
@@ -68,7 +73,23 @@ J(A,B) = \frac{|A \cap B|}{|A \cup B|}
 \end{equation}
 \subsubsection{Probleme}
 CF wird meist in Umgebungen mit sehr großen Datenmengen eingesetzt. Dies führt dazu, dass neue Benutzer erst genügend Bewertungen abgeben müssen, bevor für sie sinnvolle Vorhersagen getroffen werden können. Das gleiche gilt für neue Objekte, welche noch nicht genügend Bewertungen haben.\footnote{Siehe: http://en.wikipedia.org/wiki/Cold\_start} Ein weiteres Problem stellt die Skalierung von CF-basiertes System dar. Da solche Systeme oft im Web-Bereich eingesetzt werden, müssen sie sehr hohen Anforderungen an die Reaktionszeit entsprechen.
-\section{Eingesetzte Technologien}
 \section{Implementierung}
+\subsection{Datenquellen}
+
+\subsection{Auswahl der Filter-Methode}
+Das gewählte Framework bietet verschiedene Methoden zur Filterung.
+Folgende sind wählbar:
+\begin{itemize}
+\item \textbf{UBCF} - User-Based Collaborative Filtering
+\item \textbf{IBCF} - Item-Based Collaborative Filtering
+\item \textbf{POPULAR} - Filtert basierend auf der Popularität von Objekten
+\item \textbf{RANDOM} - Filtert Objekte zufällig
+\end{itemize}
+Im Folgenden wurden die verschiedenen Ansätze bei gleichen Bedingungen und Daten eingesetzt. In Abbildung 1 ist zu sehen, wie sich die verschiedenen Methoden verhalten. \textbf{TPR (True Positive Rate)} beschreibt hier bei die Rate an Treffern, die für den Benutzer wirklich relevant sind. \textbf{FPR (False Positive Rate)} beschreibt die Rate an Treffern, die nicht relevant sind. Die Datenpunkte beschreiben dabei die Anzahl der zusuchenden Objekte. Aus Abbildung 1 kann somit abgelesen werden, dass \textbf{UBCF} sowohl die beste \textbf{TPR}, als auch die niedrigste \textbf{FPR} hat. \textbf{UBCF} wurde somit als Algorithmus zur Filterung für das RS ausgewählt.
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{TPRFPR.png}
+\caption{Vergleich der Trefferquoten verschiedener Filter-Methoden.}
+\end{figure}
 \section{Quellen}
 \end{document}
