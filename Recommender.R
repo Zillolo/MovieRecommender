@@ -22,7 +22,7 @@ train <- MovieLense[1:900]
 # Get the user dataset from the matrix.
 user <- MovieLense[930]
 # Show the users ratings as matrix.
-as(user, "matrix")
+print(as(user, "matrix"))
 
 # Construct a Recommender object and use UBCF as filtering algorithm.
 r <- Recommender(train, method="UBCF")
@@ -30,7 +30,7 @@ r <- Recommender(train, method="UBCF")
 # Predict the top 10 movies for the User.
 predicted <- predict(r, user, n = 10)
 # Show the top 10 predicted movies.
-as(predicted, "list")
+print(as(predicted, "list"))
 
 # Create an EvaluationScheme as to evaluate different approaches.
 scheme <- evaluationScheme(train, method="cross", k = 4, given = 10, goodRating = 3)
