@@ -1,60 +1,48 @@
+# Load recommenderlab framework.
 library(recommenderlab)
 
-# Load data from CSV file.
-affinity.data <- read.csv("~/Downloads/MovieLens/ratings.dat", sep=";", header = FALSE)
-# Remove timestamp row from data.
-affinity.data <- affinity.data[, -c(4)]
-# Set column names for data frame.
-colnames(affinity.data) <- c("uId", "mId", "rPreference")
+# Load 100k-Ratings MovieLense dataset.
+data(MovieLense)
 
-# Transform data to rating matrix.
-affinity.matrix <- as(affinity.data, "realRatingMatrix")
-# Create a recommender model.
-Rec.model <-Recommender(affinity.matrix[1:1000], method="UBCF", param=list(normalize="Z-score", method="Cosine", nn=5, minRating=1))
+# Plot all of the ratings as matrix.
+image(MovieLense)
 
-# Predict ratings for every item in the matrix.
-#predicted <- predict(Rec.model, affinity.matrix[1:1000], type="ratings")
+# Show the number of ratings per User
+hist(rowCounts(MovieLense), breaks=100, main="Anzahl der Bewertungen pro Benutzer", col="lightgreen", xlab="Anzahl der Benutzer", ylab="Anzahl der Bewertungen")
+## Show the number of ratings per Movie.
+hist(colCounts(MovieLense), breaks=200, main="Anzahl der Bewertungen pro Film", col="yellow", xlab="Anzahl der Filme", ylab="Anzahl der Bewertungen")
+# Show the mean rating per user.
+hist(rowMeans(MovieLense), breaks=200, main="Durchschnittliche Bewertungen der Benutzer", col="red", xlab="Durchschnittliche Bewertung", ylab="Anzahl der Benutzer")
+# Show the mean rating per movie.
+hist(colMeans(MovieLense), breaks=200, main="Durchschnittliche Bewertungen der Filme", col="orange", xlab="Durchschnittliche Bewertung", ylab="Anzahl der Filme")
 
-# Predict 5 items for the user with the id 100.
-recommended.items.u100 <- predict(Rec.model, affinity.matrix["100",], type="ratings")
-# Look for the top 3 elements for the user with the id 100.
-# recommended.items.u100.top3 <- bestN(recommended.items.u100, n=3)
+# Construct a train dataset to train the recommender.
+train <- MovieLense[1:900]
 
-# Print the top 3 recommendations for the user.
-#print(as(recommended.items.u100.top3, "list"))
-# Print the newly calculated values.
-print(as(recommended.items.u100, "list"))
-# Print the real matrix.
-print(as(affinity.matrix["100",], "list"))
+# Get the user dataset from the matrix.
+user <- MovieLense[930]
+# Show the users ratings as matrix.
+as(user, "matrix")
 
-e <- evaluationScheme(affinity.matrix[1:1000], method="split", train=0.9, given=15)
-Rec.ubcf <- Recommender(getData(e, "train"), "UBCF")
-# Rec.ibcf <- Recommender(getData(e, "train"), "IBCF")
-p.ubcf <- predict(Rec.ubcf, getData(e, "known"), type="ratings")
-# p.ibcf <- predict(Rec.ibcf, getData(e, "known"), type="ratings")
-error.ubcf <- calcPredictionAccuracy(p.ubcf, getData(e, "unknown"))
-# error.ibcf <- calcPredictionAccuracy(p.ibcf, getData(e, "unknown"))
-# error <- rbind(error.ubcf, error.ibcf)
-# rownames(error) <- c("UBCF", "IBCF")
-print(error.ubcf)
-# Rec.model <- Recommender(affinity.matrix[1:1000], "UBCF")
-# 
-# recommended.items.u1 <- predict(Rec.model, affinity.matrix["1",], n=5)
-# recommended.items.u1.top <- bestN(recommended.items.u1, n=3)
-# 
-# # print(as(recommended.items.u1.top, "list"))
-# 
-# predicted.affinity.u1 <- predict(Rec.model, affinity.matrix["100", ], type="ratings")
-# print(as(predicted.affinity.u1, "list"))
-# print(as(affinity.matrix["100", ], "list"))y
-# 
-# e <- evaluationScheme(affinity.matrix[1:1000], method="split", train=0.9, given=15)
-# Rec.ubcf <- Recommender(getData(e, "train"), "UBCF")
-# # Rec.ibcf <- Recommender(getData(e, "train"), "IBCF")
-# p.ubcf <- predict(Rec.ubcf, getData(e, "known"), type="ratings")
-# # p.ibcf <- predict(Rec.ibcf, getData(e, "known"), type="ratings")
-# error.ubcf <- calcPredictionAccuracy(p.ubcf, getData(e, "unknown"))
-# # error.ibcf <- calcPredicitionAccuracy(p.ibcf, getData(e, "unknown"))
-# # error <- rbind(error.ubcf, error.ibcf)
-# # rownames(error) <- c("UBCF", "IBCF")
-# print(error.ubcf)
+# Construct a Recommender object and use UBCF as filtering algorithm.
+r <- Recommender(train, method="UBCF")
+
+# Predict the top 10 movies for the User.
+predicted <- predict(r, user, n = 10)
+# Show the top 10 predicted movies.
+as(predicted, "list")
+
+# Create an EvaluationScheme as to evaluate different approaches.
+scheme <- evaluationScheme(train, method="cross", k = 4, given = 10, goodRating = 3)
+
+# List the different algorithms we want to compare.
+algortihms <- list("Random Items" = list(name="RANDOM", param =NULL),
+                   "Popular Items" = list(name="POPULAR", param = NULL),
+                   "UBCF" = list(name="UBCF", param=list(method="Cosine", nn=50)),
+                   "IBCF" = list(name="IBCF", param = list(method="Cosine", k=50)))
+
+# Evaluate the algorithms.
+results <- evaluate(scheme, algorithms, n = c(1,3,5,10,15,20,50))
+
+# Plot a chart to compare the approaches.
+plot(results, annotate = 1:4, legend = "right")
